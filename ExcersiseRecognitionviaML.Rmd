@@ -1,0 +1,50 @@
+---
+title: "Sensor based Excersise Recognition using Machine Learning"
+author: "Leon Gor"
+date: "30 June 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+
+## Short Description
+This document showcases using machine learning algorithms to identify the correctness of performed physical excersise from data obtained by placing various sensors on human body and on the excersising equipment.
+The data is organized in a form of data-set consisting of 160 variables and 19642 measurements.
+Of these 160 variables, first 7 are informative variables, 52 represent raw data from the sensors and the rest are the summaries of these raw data obtained on window by window basis with window length of 24 raw samples.
+This data is applied to 3 machine learning algorithms (Random Trees, Boosting and Bagging) to train them to recognize whether physical activity was performed correctly. There are 4 types of quality (stored in variable classe): A defined as the correct way to do the excersise and B,C,D and E are incorrect ways. 
+
+## Choice of algorithms and filtering data
+This is the classification problem with high dimensionality. The most suitable candidate is Random Forest Algorithm.
+52 features (the raw data) were used to train predict and evaluate accuracy of the algorithm.
+
+
+## Organizing the data
+Firsty, the snippet of R code shows breaking training data into two blocks: "training" and "testing" and extracting only 52 raw features:
+```{r filtering data, echo=TRUE}
+library(caret)
+Train <- read.csv(file = "/home/leon/New path/Data_science/Machine Learning/Assignment/pml-training.csv")
+inTrain = createDataPartition(Train$classe, p = 3/4)[[1]]
+training = Train[ inTrain,]
+testing = Train[-inTrain,]
+
+Names <- names(training)
+matches <- c("^roll_?","^pitch_?","^yaw_?","^total_accel_?","^gyros_?_?","^accel_?_?","^magnet_?_?","classe")
+Raw_names_ind <- grepl(paste(matches, collapse = "|"),names(training))
+Raw_names <- Names[Raw_names_ind]
+training_raw<-training[,Raw_names_ind]
+testing_raw<-testing[,Raw_names_ind]
+```
+Following this Random Forest was trained:
+```{r running algorithms, echo=TRUE}
+modelRF <- train(classe~.,method = "rf",preProcess = "scale",trControl = trainControl(method = "cv", number = 4), importance = T, data = training_raw)
+```
+Prediction on "testing" data was performed and Confusion matrix obtained, where out of sample error is the accuracy in confusion matrix:
+```{r Out_of_sample, echo=TRUE}
+predRF <- predict(modelRF,testing_raw)
+confusionMatrix(predRF,testing_raw$classe)
+```
+
